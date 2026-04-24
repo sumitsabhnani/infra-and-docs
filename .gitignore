@@ -1,0 +1,12 @@
+# Secrets
+.env
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# IDE
+.idea/
+.vscode/

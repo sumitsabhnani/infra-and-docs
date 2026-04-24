@@ -1,0 +1,32 @@
+# Caddyfile — path-based routing (no CORS, single domain)
+#
+# Required env vars on VPS:
+#   DOMAIN               — e.g. dhantera.com
+#   DOZZLE_USER          — basic-auth username for the logs UI
+#   DOZZLE_PASSWORD_HASH — bcrypt hash of the password
+#                          Generate: docker run --rm caddy:2-alpine caddy hash-password --plaintext 'yourpassword'
+
+{$DOMAIN} {
+
+    # ── API routes ───────────────────────────────────────────────────────────────
+    # Strip /api prefix before forwarding so Spring Boot controllers remain at
+    # their natural paths (e.g. /api/portfolios → /portfolios on the backend).
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy backend:8080
+    }
+
+    # ── Dozzle log viewer — basic-auth protected ─────────────────────────────────
+    # Dozzle is started with --base /logs, so the /logs prefix must be preserved.
+    handle /logs/* {
+        basicauth {
+            {$DOZZLE_USER} {$DOZZLE_PASSWORD_HASH}
+        }
+        reverse_proxy dozzle:8080
+    }
+
+    # ── Angular SPA (catch-all) ───────────────────────────────────────────────────
+    handle {
+        reverse_proxy frontend:80
+    }
+}

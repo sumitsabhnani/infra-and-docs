@@ -1,0 +1,130 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Portfolio Optimizer — Raspberry Pi 4B (Ubuntu Server 24.04 LTS, ARM64)
+#
+# Stateless stack: DB lives in AWS RDS, no Postgres/Redis containers.
+# Pi runs without swap, so the JVM is capped via JAVA_TOOL_OPTIONS and the
+# container is hard-limited to 1.5 GiB. The Nginx container is the only
+# host-exposed service (port 80) and reverse-proxies /api → backend.
+#
+# Usage:
+#   cp .env.pi.example .env.pi
+#   # fill in RDS_* and secret values
+#   docker compose -f docker-compose.pi.yml --env-file .env.pi up -d
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  backend:
+    build:
+      context: portfolio-optimizer-backend
+      dockerfile: Dockerfile.pi
+    image: portfolio-optimizer-backend:arm64
+    container_name: portfolio-optimizer-backend
+    platform: linux/arm64
+    expose:
+      - "8080"                  # internal only — reached via nginx upstream
+    environment:
+      # ── AWS RDS PostgreSQL ────────────────────────────────────────────────
+      # RDS_HOST is the RDS endpoint, e.g. mydb.xxxxx.us-east-1.rds.amazonaws.com
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${RDS_HOST}:${RDS_PORT:-5432}/${RDS_DB_NAME}?sslmode=require
+      SPRING_DATASOURCE_USERNAME: ${RDS_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${RDS_PASSWORD}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_FLYWAY_ENABLED: "true"
+
+      # ── JVM ergonomics ────────────────────────────────────────────────────
+      # Pi has swap disabled; over-allocation freezes the OS. These flags cap
+      # heap to 75 % of the container's 1.5 GiB (≈1.125 GiB) and pin the JVM
+      # to 2 cores so GC threads don't fan out across all 4 Pi cores.
+      JAVA_TOOL_OPTIONS: "-XX:InitialRAMPercentage=40.0 -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:ActiveProcessorCount=2"
+
+      # ── Redis / cache ─────────────────────────────────────────────────────
+      # No Redis container on the Pi. Either point these at AWS ElastiCache or
+      # disable the cache layer entirely by setting SPRING_CACHE_TYPE=none.
+      SPRING_CACHE_TYPE: ${SPRING_CACHE_TYPE:-none}
+      REDIS_HOST: ${REDIS_HOST:-}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+
+      # ── Auth / crypto secrets ─────────────────────────────────────────────
+      JWT_SECRET: ${JWT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      INTERNAL_ADMIN_TOKEN: ${INTERNAL_ADMIN_TOKEN}
+
+      # ── OAuth providers ───────────────────────────────────────────────────
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      APPLE_CLIENT_ID: ${APPLE_CLIENT_ID:-}
+      APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
+      APPLE_KEY_ID: ${APPLE_KEY_ID:-}
+      APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
+
+      # ── Third-party integrations ──────────────────────────────────────────
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM_ADDRESS: ${RESEND_FROM_ADDRESS:-admin@dhantera.com}
+      SNAPTRADE_CLIENT_ID: ${SNAPTRADE_CLIENT_ID}
+      SNAPTRADE_CONSUMER_KEY: ${SNAPTRADE_CONSUMER_KEY}
+      SNAPTRADE_REDIRECT_URI: ${SNAPTRADE_REDIRECT_URI}
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
+      EODHD_API_KEY: ${EODHD_API_KEY:-}
+      OPENFIGI_API_KEY: ${OPENFIGI_API_KEY:-}
+      ZERODHA_API_KEY: ${ZERODHA_API_KEY:-}
+      ZERODHA_API_SECRET: ${ZERODHA_API_SECRET:-}
+      GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY:-}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:-}
+      SUPABASE_STORAGE_BUCKET: ${SUPABASE_STORAGE_BUCKET:-}
+      BHAVKOSH_API_KEY: ${BHAVKOSH_API_KEY:-}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+
+      APP_BASE_URL: ${APP_BASE_URL}
+      LOGGING_LEVEL_ROOT: ${LOGGING_LEVEL_ROOT:-INFO}
+
+    # ── Hard container memory limit ─────────────────────────────────────────
+    # Compose v2 respects this under `docker compose up` (no swarm needed).
+    # Matches the JVM MaxRAMPercentage math above.
+    mem_limit: 1.5g
+    mem_reservation: 1g
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
+        reservations:
+          memory: 1G
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: portfolio-optimizer-frontend
+      dockerfile: Dockerfile.pi
+    image: portfolio-optimizer-frontend:arm64
+    container_name: portfolio-optimizer-frontend
+    platform: linux/arm64
+    ports:
+      - "80:80"                 # only host-exposed port; /api/* proxies inward
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
