@@ -162,6 +162,15 @@ services:
     networks:
       - app-network
 
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "127.0.0.1:8080:8080" # Binds only to local loopback for security
+    restart: unless-stopped
+
 networks:
   app-network:
     driver: bridge
