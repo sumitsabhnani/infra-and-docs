@@ -35,7 +35,7 @@ services:
 
   backend:
     build:
-      context: portfolio-optimizer-backend
+      context: ../portfolio-optimizer-backend
       dockerfile: Dockerfile
     image: portfolio-optimizer-backend:latest
     container_name: portfolio-optimizer-backend
@@ -108,7 +108,7 @@ services:
 
   price-sweeper:
     build:
-      context: price-sweeper
+      context: ../price-sweeper
       dockerfile: Dockerfile
     image: portfolio-price-sweeper:latest
     container_name: portfolio-price-sweeper
@@ -131,7 +131,7 @@ services:
 
   frontend:
     build:
-      context: portfolio-optimizer-frontend
+      context: ../portfolio-optimizer-frontend
       dockerfile: Dockerfile
     image: portfolio-optimizer-frontend:latest
     container_name: portfolio-optimizer-frontend
