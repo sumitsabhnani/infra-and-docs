@@ -58,6 +58,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       INTERNAL_ADMIN_TOKEN: ${INTERNAL_ADMIN_TOKEN}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS}
 
       # OAuth
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
@@ -168,7 +169,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
-      - "127.0.0.1:8080:8080" # Binds only to local loopback for security
+      - "127.0.0.1:9999:8080" # Binds only to local loopback for security
     restart: unless-stopped
 
 networks:
