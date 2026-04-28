@@ -55,7 +55,8 @@ Two import modes. Both converge on the **same commit path**: persist `Transactio
 |---|---|
 | `POST /api/v1/csv-import/infer-mapping` | AI mode only: header + first 5 rows → `LlmService` → `MappingProposal`. No data beyond the sample leaves this path. |
 | `POST /api/v1/csv-import/preview` | Parse the full file deterministically. Return preview rows. **No writes.** |
-| `POST /api/v1/csv-import/commit` | Take reviewed rows from preview; insert transactions; trigger holdings refresh. |
+| `POST /api/v1/csv-import/commit` | Take reviewed rows from preview; insert transactions; trigger holdings refresh; trigger JIT historical-price backfill for any newly-created listings. |
+| `GET  /api/v1/csv-import/backfill-status?listingIds=...` | Stateless poll endpoint for the post-commit sync banner. Reads `market_data_price_daily` directly (no job table) and returns SnapTrade-shaped `{ status, syncPhase, completedCount, totalCount, pendingListingIds }`. Auth-filtered to the caller's owned listings; capped at 200 IDs per request. See ADR-022. |
 
 ---
 
@@ -92,7 +93,9 @@ Two import modes. Both converge on the **same commit path**: persist `Transactio
 | `dto/csvimport/CsvPreviewRequest.java` | Record: all preview params; AI fields nullable for strict mode |
 | `dto/csvimport/CsvPreviewResponse.java` | Record: rows + parseErrors + warnings + stats |
 | `dto/csvimport/CsvCommitRequest.java` | Record: portfolioId + mode + rows |
-| `dto/csvimport/CsvCommitResponse.java` | Record: committed + skippedDuplicates + failed + errors |
+| `dto/csvimport/CsvCommitResponse.java` | Record: committed + skippedDuplicates + failed + errors + `newListingIds` (UUIDs of brand-new listings whose backfill was triggered) |
+| `dto/csvimport/CsvBackfillStatusResponse.java` | Record: status + syncPhase + completedCount + totalCount + pendingListingIds (mirrors SnapTrade sync DTO so frontend polling code is parallel) |
+| `service/csvimport/CsvImportStatusService.java` | Stateless aggregator: auth-filters listing IDs to the caller's owned set, then asks `MarketDataPriceDailyRepository.findListingIdsWithPriceData` which have ≥1 bar |
 
 ### Validation rules
 - `quantity > 0`, `price >= 0`
@@ -107,6 +110,93 @@ ISIN is mapped as an optional column in both strict and AI modes. When present a
 1. `findByIsin(isin)` is tried first — globally unique, resolves cross-exchange ambiguity
 2. Falls back to exchange + ticker + currency
 3. Falls back to ticker-only
+
+### Historical price backfill (post-commit)
+
+Any listing created during commit gets the same JIT treatment SnapTrade applies after a broker sync:
+
+```
+CsvImportService.commit() — per row
+  ↓ resolveListing() → ListingResolutionResult { listing, wasCreated }
+  ↓ transactionRepository.save(txn)
+  ↓ if (wasCreated && newListingIds.add(listing.id)):
+     → JitSecuritySetupService.onNewListingCreated(listing)
+        → creates MarketDataSymbol if missing
+        → publishes HistoricalPriceBackfillRequestedEvent (AFTER_COMMIT, async)
+     → enqueueFigiResolution(listing)        // figi_resolution_queue
+  ↓ commit response: newListingIds = LinkedHashSet of brand-new listings
+```
+
+JIT and FIGI calls are wrapped in **independent try/catch blocks** so a JIT failure cannot block FIGI enqueue and neither can roll back the saved transaction (mirrors the existing per-row error-isolation contract). The `LinkedHashSet` dedups the firing within a single commit — a CSV with 50 BUY rows for the same brand-new ticker triggers JIT exactly once.
+
+### Backfill-status sync banner (frontend)
+
+The frontend reuses the SnapTrade sync banner exactly — same `.sync-banner--syncing` / `.sync-banner--success` / `.sync-banner--error` SCSS, same 5000 ms poll interval, same 2500 ms message-rotation, same 120-attempt cap (~10 minutes). Only the message strings and the polled endpoint differ.
+
+```
+bulk-changes-tab → @Output csvBackfillStarted({ listingIds })
+   → add-transaction-modal forwards
+   → portfolio.component.onCsvBackfillStarted()
+       → startCsvBackfillPolling(listingIds)         // 5s interval
+       → startCsvSyncMessageCycle()                  // 2.5s rotation
+       → on status === 'ACTIVE' → loadHoldings() + auto-dismiss after 3s
+       → on FAILED or 120 attempts exhausted → error variant
+```
+
+Banner state (`csvSyncStatus`, `csvSyncPhase`, `csvBackfillListingIds`) is **parallel** to the SnapTrade equivalent rather than shared, so a user with a SnapTrade sync running concurrently does not see banners collide.
+
+See ADR-022 for the architectural rationale (why no `csv_import_job` table) and the auth/DoS guards on the status endpoint.
+
+### Heterogeneous broker formats (AI_FLEXIBLE only)
+
+Real-world broker exports (Freetrade, Trading 212, Schwab, Vanguard, Revolut) often diverge from the
+strict template in three ways:
+
+1. **Composite type signal** — the activity category (`ORDER`, `DIVIDEND`, `INTEREST_FROM_CASH`,
+   `MONTHLY_STATEMENT`, ...) is in one column, the trade direction (`BUY`/`SELL`) in another.
+2. **Non-trade rows interleaved** — cash interest, monthly statements, top-ups, withdrawals, fee
+   accruals appear inline with trades and have no ticker / quantity / price.
+3. **Per-row price column varies** — `DIVIDEND` rows often have an empty primary price column and a
+   per-share dividend column instead.
+
+`ColumnMapping` carries four optional fields to express these patterns generically (no per-broker
+adapters):
+
+| Field | Purpose | Freetrade example |
+|---|---|---|
+| `directionColumn` | Trade direction column when separate from category | `"Buy / Sell"` |
+| `dividendPriceColumn` | Per-share fallback used when row resolves to `DIVIDEND` and the primary `priceColumn` is blank | `"Dividend Amount Per Share"` |
+| `skipTypes` (max 20) | Values in `typeColumn` whose rows are marked `SKIPPED` (surfaced in preview, never persisted) | `["INTEREST_FROM_CASH", "MONTHLY_STATEMENT", "TOP_UP", "WITHDRAWAL"]` |
+| `typeAliases` (max 20) | Map from raw category to canonical type. Sentinel `"<USE_DIRECTION>"` defers to `directionColumn` | `{"ORDER":"<USE_DIRECTION>", "PROPERTY":"DIVIDEND", "SPECIAL_DIVIDEND":"DIVIDEND"}` |
+
+**Per-row resolution order** in `CsvImportService.previewAiFlexible`:
+
+1. If `rawCategory ∈ skipTypes` → mark `RowStatus.SKIPPED`, skip remaining checks, exclude from
+   commit.
+2. Resolve `rawType = typeAliases[rawCategory]` if set; sentinel `"<USE_DIRECTION>"` reads
+   `directionColumn` for that row.
+3. Canonicalise via `typeValueMap` → `BUY` / `SELL` / `DIVIDEND` / `TRANSFER`.
+4. For `DIVIDEND` rows with blank `priceColumn`, fall back to `dividendPriceColumn`.
+
+**Row status model**: `PreviewRow.rowStatus` is `NEW | DUPLICATE | SKIPPED | INVALID`. The legacy
+`dedupStatus: NEW | DUPLICATE` is preserved for one release for client back-compat. `SKIPPED` rows
+appear in the preview with a grey badge and `skipReason` tooltip; `validationErrors` is empty;
+they're excluded from `validRows` and counted in the new `skippedRows` field on `CsvPreviewResponse`.
+
+**Date robustness**: `parseFlexibleDateTime` (returns `OffsetDateTime` in UTC) cascades through
+`OffsetDateTime → LocalDateTime → LocalDate → Instant.parse`, so ISO-8601 timestamps with offsets
+(`2026-04-17T00:00:00.000Z`) parse cleanly even when the configured `dateFormat` is too restrictive.
+`LocalDate` / `LocalDateTime` are transient extraction steps only — never escape the helper.
+
+**Bounds**: `AiCsvMapper.MAX_LIST_OR_MAP_ENTRIES = 20`. Excess `skipTypes` / `typeAliases` entries
+in the LLM response are truncated silently with a debug log (matches the existing
+`validateColumn` hallucination-guard pattern). `directionColumn` and `dividendPriceColumn` go
+through the same `validateColumn` header-existence check as the original 10 columns.
+
+**Out of scope for this iteration** — proper cash transaction types (`DEPOSIT` / `WITHDRAWAL` /
+`INTEREST` / `FEE`) with nullable `security_listing_id`. Today those rows show as `SKIPPED`. Adding
+them later is forward-compatible: the same `skipTypes` entries become alias targets to the new
+cash types instead.
 
 ---
 

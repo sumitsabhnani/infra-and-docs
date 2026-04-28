@@ -1,6 +1,6 @@
 # ADR-015: 3-Minute Polling + Flash Highlights for Live Market Indices
 
-**Status:** Accepted
+**Status:** Superseded by ADR-023 (feature removed 2026-04-28)
 **Date:** 2026-04-21
 **Depends on:** ADR-007 (Redis-first market indices, background-warmed cache)
 

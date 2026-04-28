@@ -1,6 +1,6 @@
 # ADR-007: Redis-First Market Indices — Background-Warmed Cache for Top-Bar Data
 
-**Status:** Accepted  
+**Status:** Superseded by ADR-023 (feature removed 2026-04-28)  
 **Date:** 2026-04-12  
 **Context:** The top-bar market indices (S&P 500, Dow Jones, Nasdaq, NIFTY 50, MSCI ACWI) were fetched synchronously from the EODHD real-time API on every cache miss. With a 5-minute TTL and 5 sequential API calls (200ms inter-call sleep), the first user request after expiry blocked for ~1s+. This degraded TTFB unpredictably and consumed EODHD rate-limit budget on the hot path. A secondary issue: `CacheConfig.java` in the `api` module declared a `RedisCacheManagerBuilderCustomizer` for the `marketIndexes` cache, but `RedisConfig.java` in `core` created an explicit `@Bean CacheManager`, causing Spring Boot autoconfiguration to back off — the customizer never fired, and the cache silently used the default 1-hour TTL.
 

@@ -81,6 +81,11 @@ services:
       ZERODHA_API_SECRET: ${ZERODHA_API_SECRET}
       BHAVKOSH_API_KEY: ${BHAVKOSH_API_KEY}
 
+      # FIGI batch poller — claims figi_resolution_queue rows and calls OpenFIGI
+      # off the hot path. Default in code is true; set explicitly to make
+      # the deployment self-documenting and prevent silent disablement.
+      FIGI_POLLER_ENABLED: "true"
+
       # AI / notifications / storage
       GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY}
       RESEND_API_KEY: ${RESEND_API_KEY}

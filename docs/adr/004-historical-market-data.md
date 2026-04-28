@@ -67,9 +67,9 @@ market_data_symbol
 
 ### Backfill Triggers
 
-The `EodhdHistoricalPriceBackfillJob` fires in two scenarios:
+The `EodhdHistoricalPriceBackfillJob` fires in three scenarios:
 
-**1. JIT (Just-In-Time) — Event-Driven**
+**1. JIT — Ticker Resolution (broker / SnapTrade path)**
 
 ```
 Ticker resolution completes
@@ -88,7 +88,11 @@ EodhdHistoricalPriceBackfillJob.onBackfillRequested()
 
 The `AFTER_COMMIT` timing ensures the `MarketDataSymbol` row is visible to the backfill job (no dirty reads).
 
-**2. On-Demand — Bulk Backfill**
+**2. JIT — CSV Import (bulk-upload path)**
+
+`CsvImportService.commit()` detects newly-created listings (`ListingResolutionResult.wasCreated()` flag) and calls `JitSecuritySetupService.onNewListingCreated(listing)` after each row's transaction is saved. This routes through the same `MarketDataSymbol` creation + `HistoricalPriceBackfillRequestedEvent` publication as path #1, so the EODHD/Bhavkosh job wiring is shared. Newly-created listing IDs are returned in `CsvCommitResponse.newListingIds`; the frontend polls `GET /api/v1/csv-import/backfill-status` to drive the same sync-banner UX SnapTrade uses (ADR-022).
+
+**3. On-Demand — Bulk Backfill**
 
 `backfillAll()` scans all active EODHD `MarketDataSymbol` rows that have zero bars in `market_data_price_daily` and backfills them. Used for bootstrapping or recovering from a failed initial load.
 
