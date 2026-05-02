@@ -1,6 +1,6 @@
 # ADR-018: Global Chronological Replay — Connected-Component Valuation Engine
 
-**Status:** Accepted (shadow-mode)
+**Status:** Accepted — `app.features.global-replay` flag and legacy per-master AVCO paths removed in fc26b7b/43dc768; Holdings now consume the engine; spin-off ingest replumbed (see ADR-024).
 **Date:** 2026-04-22
 **Context:** Phase B of the corporate-actions roadmap closes two gaps the per-master AVCO walker could not model: **mergers** (cost basis must move from security A to security B at an exact UTC ex_date, optionally with a cash-boot realization) and **spin-offs** (a fraction of parent basis must move to a newly-appearing child master while parent shares stay unchanged). Both are structurally cross-master state transitions — the pre-Phase-B engine processed transactions per-`security_master_id` in isolation, so every consumer (`HistoryQueryService`, `StockGroupService`, `TickerDetailService`) looped per master and never saw two masters in one walk. A user who held AT&T through the 2022 WBD spin-off saw arithmetically wrong realized P/L on the WBD leg: no basis had been transferred. Fixing this required rewriting the AVCO loop, not bolting a handler onto it. This ADR records the architectural shift and its two non-obvious design decisions: (a) connected-component replay as the new walk shape; (b) ephemeral ledger entries as the audit surface, instead of extending the immutable ledger enum.
 
