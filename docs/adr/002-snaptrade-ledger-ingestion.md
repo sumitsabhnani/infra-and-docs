@@ -1,7 +1,8 @@
 # ADR-002: SnapTrade Ledger Ingestion — "Never Drop Data"
 
-**Status:** Accepted  
-**Date:** 2026-04-12  
+**Status:** Accepted (extended by ADR-028 for activity-type routing)
+**Date:** 2026-04-12
+**Extended by:** ADR-028 — the "all activities flow into `transactions`" data flow described below now fans out into `transactions` + `cash_flows` + `corporate_action_*` via the `broker_activity_log.parsed_entity_type` discriminator. The "Never Drop Data" principle is unchanged.
 **Context:** Broker-connected portfolios import holdings and transactions from SnapTrade. Broker data is messy — tickers are inconsistent, exchanges are missing, and the same security can appear under different symbols across brokers.
 
 ---
