@@ -1,8 +1,24 @@
 # ADR-020: Bulk CSV Import — AI-Assisted Mapper Pattern and OPENING_BALANCE Transaction Type
 
-**Status:** Accepted  
-**Date:** 2026-04-23  
-**Context:** Users need to bulk-import transactions and current holdings from arbitrary broker CSV exports. The holdings import path previously wrote directly to the `holdings` table, bypassing the transaction ledger entirely — a correctness violation. AI-assisted import was wanted for arbitrary broker formats but posed prompt-injection and scalability risks if the LLM was allowed to extract financial data.
+**Status:** Partially Superseded
+**Date:** 2026-04-23
+
+## Superseded sections
+
+The following decisions in this ADR no longer reflect shipped behavior. Do not implement against them:
+
+- **`OPENING_BALANCE` transaction type (Decision 1)** was added in V20260423120000 and **removed** in V20260424120000. Existing rows were back-converted to `BUY`. The current `TransactionType` enum does not contain `OPENING_BALANCE`.
+- **`HOLDINGS` import mode (Decision 2)** was specified here but **never shipped**. The current `ImportMode` enum is `TRANSACTIONS | AI_FLEXIBLE` only. Holdings-snapshot upload via CSV is explicitly out of scope.
+
+The AI-assisted mapper pattern (Decision 3) and surrounding architecture **remain accurate** and are still in production.
+
+For the current shipped design, see:
+- `infra-and-docs/docs/specs/feature-spec-csv-import.md`
+- `infra-and-docs/docs/adr/026-heterogeneous-broker-csv-format-support.md`
+
+---
+
+**Context (original, retained for history):** Users need to bulk-import transactions and current holdings from arbitrary broker CSV exports. The holdings import path previously wrote directly to the `holdings` table, bypassing the transaction ledger entirely — a correctness violation. AI-assisted import was wanted for arbitrary broker formats but posed prompt-injection and scalability risks if the LLM was allowed to extract financial data.
 
 ---
 

@@ -1,8 +1,9 @@
 # ADR-028: SnapTrade Activity Dual-Track Routing — `transactions` + `cash_flows` + `corporate_action_*`
 
-**Status:** Accepted
+**Status:** Accepted — §Decision 2 partially superseded by ADR-029
 **Date:** 2026-05-02
 **Extends:** ADR-002 (SnapTrade ledger ingestion), ADR-024 (cross-master corporate actions end-to-end)
+**Superseded by:** ADR-029 (broker-reported corporate-action `Transaction` rows are non-authoritative for AVCO; the canonical source is `corporate_action_*` from EODHD/BhavKosh)
 
 ---
 
@@ -49,7 +50,7 @@ BUY | SELL | DIVIDEND | TRANSFER
 | BONUS | SPLIT | MERGER_IN | MERGER_OUT | SPINOFF_IN | RIGHTS_IN
 ```
 
-The first four are trade-shaped. The remaining six are per-account broker emissions — what the broker tells you happened to *your* position when a corporate action fired. They feed the AVCO walk in `RealizedGainCalculator.applyTransaction` (lines 516/532/547) so that quantity / cost-basis movement on the broker side is reconcilable with the ledger.
+The first four are trade-shaped. The remaining six are per-account broker emissions — what the broker tells you happened to *your* position when a corporate action fired. **As of ADR-029 they are non-authoritative for AVCO**: `PortfolioReplayService` filters them out of the timeline so the canonical EODHD/BhavKosh `corporate_action_*` row is the only thing that moves quantity. The `RealizedGainCalculator.applyTransaction` cases (lines 516/532/547) remain as audit-trail behaviour for any future replay path that opts in, but no production walk consumes them today.
 
 **MERGER direction is resolved by sign-of-quantity:**
 - positive units → `MERGER_IN`

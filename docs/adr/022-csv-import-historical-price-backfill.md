@@ -76,7 +76,7 @@ Maximum 200 listing IDs per request. A real interactive CSV import that creates 
 
 ### 5. Frontend reuses SnapTrade banner UX exactly
 
-The CSV polling lifecycle uses the same `.sync-banner--syncing` / `.sync-banner--success` / `.sync-banner--error` SCSS classes, the same 5000 ms poll interval, the same 2500 ms message rotation, the same 120-attempt cap (~10 minutes). Only the message strings and the polled endpoint differ. **Parallel state**, not shared — `csvSyncStatus` lives alongside (not replacing) the SnapTrade `syncStatus` so a user with both flows running concurrently does not see banners collide.
+The CSV polling lifecycle uses the same `.sync-banner--syncing` / `.sync-banner--success` / `.sync-banner--error` SCSS classes and the same 2500 ms message rotation. **The fixed 5 s interval / 120-attempt cap was replaced (2026-05) with a growing schedule** — `5 s × 6 → 30 s × 10 → 60 s indefinitely` until the user dismisses or status flips to `ACTIVE`. The hard 10-minute cliff that previously flipped the banner to `FAILED` while the backfill was genuinely still running is gone; only `4xx` responses now end the loop in error. The frontend also chunks `listingIds` into batches of ≤ 200 via `forkJoin` and aggregates worst-case `status`/`syncPhase`, so an import that creates more than 200 brand-new listings no longer 400s on the controller's `@Size(max = 200)` guard. **Parallel state**, not shared — `csvSyncStatus` lives alongside (not replacing) the SnapTrade `syncStatus` so a user with both flows running concurrently does not see banners collide.
 
 ### 6. Pre-fix data is not retroactively backfilled
 

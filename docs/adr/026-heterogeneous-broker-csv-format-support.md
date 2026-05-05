@@ -45,14 +45,16 @@ The fields live on `ColumnMapping` (the AI-mapper output), not on a side channel
 
 This single chain handles every Freetrade row pattern (and the analogous patterns in other brokers) without per-broker code paths.
 
-## Decision 3: `RowStatus` Enum — `NEW | DUPLICATE | SKIPPED | INVALID`
+## Decision 3: `RowStatus` Enum — `NEW | DUPLICATE | SKIPPED | INVALID | CASH_FLOW | CORPORATE_ACTION_DROPPED`
 
 `PreviewRow` gains `rowStatus` (the source of truth) and `skipReason` (human-readable, e.g. `"skipped: INTEREST_FROM_CASH"`). Semantics:
 
-- `NEW` — passed validation, not a duplicate, eligible for commit.
-- `DUPLICATE` — hash matches an existing transaction; skipped on commit.
-- `SKIPPED` — `skipTypes` rule matched; preview-only, never persisted; `validationErrors` is empty.
+- `NEW` — passed validation, not a duplicate, eligible for commit as a `Transaction`.
+- `DUPLICATE` — hash matches an existing transaction or cash flow; skipped on commit.
+- `SKIPPED` — `skipTypes` rule matched and the row is not a recognised cash event; preview-only, never persisted; `validationErrors` is empty.
 - `INVALID` — at least one entry in `validationErrors`.
+- `CASH_FLOW` — row resolved to a non-trade cash event (`DEPOSIT/WITHDRAWAL/INTEREST/FEE/TAX/FX_CONVERSION/ADJUSTMENT`) and will be persisted to the `cash_flows` table at commit (ADR-028 routing extended to CSV).
+- `CORPORATE_ACTION_DROPPED` — row resolved to a broker corp-action type (`BONUS/SPLIT/MERGER_*/SPINOFF_IN/RIGHTS_IN`); recorded for audit visibility but never persisted, since EODHD/BhavKosh `corporate_action_*` is the canonical source (ADR-029).
 
 Legacy `dedupStatus: NEW | DUPLICATE` is preserved on `PreviewRow` for one release for client back-compat — `SKIPPED` rows emit `dedupStatus = NEW`. The frontend filters `validNewRows` by `rowStatus === 'NEW'` (not by `dedupStatus`) so SKIPPED rows are never sent to commit. `CsvPreviewResponse` gains `skippedRows` alongside `validRows` / `duplicateRows`.
 
@@ -92,6 +94,6 @@ The deterministic-Java-parses-data principle from ADR-020 holds: the LLM still n
 - **`PreviewRow` carries two new fields** (`rowStatus`, `skipReason`). Existing JSON clients that ignore unknown fields are unaffected. The legacy `dedupStatus` field stays one release for client back-compat; remove in a follow-up once the frontend has cut over.
 - **`CsvPreviewResponse` carries `skippedRows`** — additive, non-breaking.
 - **The mapping editor is unchanged for users who don't need the new behaviour.** The two visible additions (Trade Direction, Dividend Fallback Price) are ordinary optional dropdowns alongside the existing ten.
-- **Cash transaction types stay out of scope.** `INTEREST_FROM_CASH`, `TOP_UP`, `WITHDRAWAL`, `MONTHLY_STATEMENT` rows are tagged `SKIPPED` and not imported. A future ADR can introduce `DEPOSIT` / `WITHDRAWAL` / `INTEREST` / `FEE` transaction types with nullable `security_listing_id`; the same `skipTypes` entries become alias targets to the new types instead. Forward-compatible by construction.
+- **Cash transaction types now route to `cash_flows`.** ADR-028 introduced the table; CSV import joined the routing in 2026-05 — broker labels for `CONTRIBUTION/DEPOSIT/WITHDRAWAL/INTEREST/FEE/MANAGEMENT_FEE/TAX/WITHHOLDING/FX/CONVERSION/ADJUSTMENT` resolve to `RowStatus.CASH_FLOW` (not `SKIPPED`) and persist to `cash_flows` at commit. `SKIPPED` is now reserved for genuinely-unrecognised categories the AI flagged as non-trade. The `skipTypes` channel still exists as the audit-trail bucket for everything that doesn't route to `cash_flows`, `transactions`, or `CORPORATE_ACTION_DROPPED`.
 - **Strict-template (`TRANSACTIONS`) mode is unchanged.** The four new fields apply only to `AI_FLEXIBLE`. Template users keep the controlled column set.
 - **No broker-named code paths exist.** The ADR's title says "broker CSV"; the implementation says "any CSV with a composite type signal or non-trade rows". This is the only shape that scales — every Freetrade-specific branch we don't write is a Trading-212-specific branch we don't have to write later.
