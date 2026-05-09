@@ -95,6 +95,10 @@ services:
       SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
       SUPABASE_STORAGE_BUCKET: ${SUPABASE_STORAGE_BUCKET}
 
+      # Fyers configuration
+      FYERS_CLIENT_ID: ${FYERS_CLIENT_ID}
+      FYERS_SECRET_KEY: ${FYERS_SECRET_KEY}
+
       # Price sweeper microservice
       PRICE_SWEEPER_BASE_URL: http://price-sweeper:8000
     depends_on:
