@@ -80,6 +80,7 @@ services:
       ZERODHA_API_KEY: ${ZERODHA_API_KEY}
       ZERODHA_API_SECRET: ${ZERODHA_API_SECRET}
       BHAVKOSH_API_KEY: ${BHAVKOSH_API_KEY}
+      BHAVKOSH_API_BASE_URL: ${BHAVKOSH_API_BASE_URL}
 
       # FIGI batch poller — claims figi_resolution_queue rows and calls OpenFIGI
       # off the hot path. Default in code is true; set explicitly to make
