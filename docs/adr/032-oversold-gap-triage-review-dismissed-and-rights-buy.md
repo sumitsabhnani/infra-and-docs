@@ -1,8 +1,12 @@
 # ADR-032: Oversold Gap Triage — reviewDismissed Flag and Rights Allotments as BUY @ price=0
 
-**Status:** Accepted
+**Status:** Accepted (with amendments — see banner below)
 **Date:** 2026-05-04
 **Extends:** ADR-029 (broker corporate-action transactions non-authoritative), ADR-031 (holdings mutate only through replay)
+
+> **Amendments**
+> - **§Decision 1** (RIGHTS_IN inert in the AVCO timeline) is **relaxed by [ADR-033](033-source-aware-replay-filter.md)**: rows of type `RIGHTS_IN` (and four sibling broker-reported corporate-action types) now pass the replay filter when `source = MANUAL_USER`. The "BUY @ price=0" workaround documented here remains valid for back-compat but is no longer the only correct path — ADR-033 §Decision 1 covers manual rows of the type's intended enum directly.
+> - **§Decision 2** (global `security_master.review_dismissed`) is **replaced by [ADR-035](035-per-user-review-dismissal.md)**: dismissals are now stored per-user in a new `master_review_dismissal` association table. Two users with independent transactions on the same master no longer share dismissal state.
 
 ---
 

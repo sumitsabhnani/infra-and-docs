@@ -128,6 +128,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
+      # Fyers — sweeper reads the encrypted access_token row written by the
+      # backend's POST /api/v1/admin/fyers/exchange and decrypts it with this
+      # key. ENCRYPTION_KEY MUST be byte-identical to the backend service.
+      FYERS_CLIENT_ID: ${FYERS_CLIENT_ID}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
     depends_on:
       postgres:
         condition: service_healthy
