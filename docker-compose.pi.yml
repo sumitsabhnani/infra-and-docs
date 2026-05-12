@@ -62,7 +62,7 @@ services:
 
       # ── Third-party integrations ──────────────────────────────────────────
       RESEND_API_KEY: ${RESEND_API_KEY}
-      RESEND_FROM_ADDRESS: ${RESEND_FROM_ADDRESS:-admin@dhantera.com}
+      RESEND_FROM_ADDRESS: ${RESEND_FROM_ADDRESS:-admin@your.domain.example}
       SNAPTRADE_CLIENT_ID: ${SNAPTRADE_CLIENT_ID}
       SNAPTRADE_CONSUMER_KEY: ${SNAPTRADE_CONSUMER_KEY}
       SNAPTRADE_REDIRECT_URI: ${SNAPTRADE_REDIRECT_URI}

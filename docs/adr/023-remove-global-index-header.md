@@ -63,7 +63,7 @@ Remove the global market index header in full.
 - `eodhd.api.key` in all three `application*.properties` files — used by other EODHD market-data workflows.
 - All Flyway migrations — none were index-specific.
 - The rest of `api/.../service/marketdata/` — only `MarketIndexService` and `MarketIndexClient` were index-specific.
-- All other `RedisConfig` cache entries (`stockPrices`, `latestPrices`, `historicalPrices`, `portfolioValuations`, `userTickers`, `supportedCurrencies`, `allLatestRates`).
+- All other `RedisConfig` cache entries (`latestPrices`, `historicalPrices`, `portfolioValuations`, `userTickers`, `supportedCurrencies`, `allLatestRates`). (`stockPrices` was subsequently removed by ADR-038 when single-symbol current-price reads were consolidated onto `latestPrices`.)
 
 ### No database changes
 

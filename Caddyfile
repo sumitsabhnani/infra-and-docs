@@ -1,7 +1,7 @@
 # Caddyfile — path-based routing (no CORS, single domain)
 #
 # Required env vars on VPS:
-#   DOMAIN               — e.g. dhantera.com
+#   DOMAIN               — e.g. your.domain.example
 #   DOZZLE_USER          — basic-auth username for the logs UI
 #   DOZZLE_PASSWORD_HASH — bcrypt hash of the password
 #                          Generate: docker run --rm caddy:2-alpine caddy hash-password --plaintext 'yourpassword'

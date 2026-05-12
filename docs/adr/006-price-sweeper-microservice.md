@@ -141,7 +141,7 @@ It does **not** write to `market_data_price_daily` (historical data is EODHD's d
 
 - The price-sweeper shares Postgres credentials with the backend. A schema migration in Java could break the Python SQL queries. The Python queries use explicit column names (not `SELECT *`) to minimize this risk.
 - Currently scoped to Indian markets (BHAVKOSH provider, IST market hours). Expanding to global markets would require configurable provider filters and multi-timezone scheduling.
-- Yahoo Finance's delayed quotes (~15 min) mean `latest_market_price` is never truly real-time. The `is_realtime = FALSE` flag on upserted rows makes this explicit.
+- Yahoo Finance's delayed quotes (~15 min) mean `latest_market_price` is never truly real-time. (Originally tracked via an `is_realtime` BOOLEAN column; the column was dropped in migration `V20260510120000` because no consumer ever read it. Freshness, where it matters, is derived from `as_of`.)
 - The `force-fetch` endpoint is not authenticated. It's internal-only (not exposed through Caddy), but adding a simple API key would be prudent if the network topology changes.
 
 ## Key Files
