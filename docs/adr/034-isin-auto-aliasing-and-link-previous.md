@@ -30,7 +30,7 @@ When no match exists, the master is created with the ISIN set normally.
 
 `TickerMappingService.mapTicker` (the manual symbol-mapping endpoint) uses the same alias rule when enriching ISIN on a master that doesn't yet have one: if a different master already owns the ISIN, the current master becomes an alias of that one — never a competing duplicate.
 
-`ExchangeSymbolLoadJob` already had ISIN-aware resolution. We added a guard inside `applySecurityUpdates` that forbids `setIsin` on rows with `canonicalMasterId != null` (alias rows must not carry the identifier).
+`ExchangeSymbolLoadJob` (EODHD/CSV bulk symbol load) routes the same-ISIN-different-ticker case through `resolveOrMintMaster` to mint an alias master, creates a new listing for the new ticker, and writes a `security_listing_rename_history` audit row with `source = 'EXCHANGE_LOAD_JOB'` — matching the `SecurityListingRenameDetectionJob` pattern. The old `security_listing` row is never mutated (ADR-019); both old and new listings remain active under the same canonical master. The `applySecurityUpdates` guard forbidding `setIsin` on rows with `canonicalMasterId != null` remains in force — alias rows must not carry the identifier.
 
 `FigiBasedIdentifierResolver.resolveByIsin` returns the ISIN holder directly. It is incidentally safe because alias rows have `isin = null` and `findByIsin` only returns canonical rows. A code comment documents this invariant for future maintainers.
 

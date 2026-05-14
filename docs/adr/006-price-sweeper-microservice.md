@@ -1,8 +1,13 @@
 # ADR-006: Price Sweeper — Python Sidecar for Real-Time Prices
 
-**Status:** Accepted  
-**Date:** 2026-04-12  
+**Status:** Accepted (with amendments — see banner below)
+**Date:** 2026-04-12
 **Context:** The Java backend needs near-real-time stock prices during Indian market hours (09:15–15:30 IST). Yahoo Finance provides free delayed quotes (~15 min), but the `yahooquery` Python library is significantly more mature and reliable than available Java alternatives. Rather than fighting the ecosystem, we built a dedicated Python microservice.
+
+> **Amendments**
+> - The price source has moved from Yahoo Finance (`yahooquery`) to **Fyers `/quotes`** for Indian listings; the sidecar architecture (Python service, shared Postgres + Redis, market-window guard, `/force-fetch` internal-only endpoint) remains canonical.
+> - Symbol resolution is no longer derived by hardcoded Yahoo→Fyers suffix synthesis. **[ADR-040](040-fyers-symbol-master-and-symbol-kind-classification.md)** establishes the Fyers public symbol master (`https://public.fyers.in/sym_details/`) as the canonical Indian resolver via ISIN-first, ticker-fallback lookup, and adds the `market_data_symbol.symbol_kind` classification surface that the sidecar consults to skip categories (e.g. `RIGHTS_ENTITLEMENT`) without leaking domain heuristics into Python SQL.
+> - The active-universe query, bulk-fetch contract, and `/health` payload changed in line with ADR-040. The architectural-isolation rationale below stays intact; the data-flow and Yahoo-specific configuration in §Data Flow / §Configuration are historical.
 
 ---
 
