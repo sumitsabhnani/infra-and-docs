@@ -8,6 +8,7 @@
 > - The price source has moved from Yahoo Finance (`yahooquery`) to **Fyers `/quotes`** for Indian listings; the sidecar architecture (Python service, shared Postgres + Redis, market-window guard, `/force-fetch` internal-only endpoint) remains canonical.
 > - Symbol resolution is no longer derived by hardcoded Yahoo→Fyers suffix synthesis. **[ADR-040](040-fyers-symbol-master-and-symbol-kind-classification.md)** establishes the Fyers public symbol master (`https://public.fyers.in/sym_details/`) as the canonical Indian resolver via ISIN-first, ticker-fallback lookup, and adds the `market_data_symbol.symbol_kind` classification surface that the sidecar consults to skip categories (e.g. `RIGHTS_ENTITLEMENT`) without leaking domain heuristics into Python SQL.
 > - The active-universe query, bulk-fetch contract, and `/health` payload changed in line with ADR-040. The architectural-isolation rationale below stays intact; the data-flow and Yahoo-specific configuration in §Data Flow / §Configuration are historical.
+> - **[ADR-042](042-fyers-quotes-tri-state-outcomes-and-negative-cache.md)** specifies the runtime failure classification (`FOUND` / `REJECTED` / `FAILED`) the sidecar emits to its callers, and the 24h negative cache at `market_data:yahoo:invalid:*` for Fyers-rejected symbols. Token-error codes from `/quotes` invalidate the in-process token cache (cross-language decryption contract — see ADR-042 §Decision 4).
 
 ---
 

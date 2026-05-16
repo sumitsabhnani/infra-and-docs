@@ -56,7 +56,7 @@ Two parallel guards:
 
 The Admin Settings page (`/admin/settings`) and the Fyers redirect target (`/admin/fyers/callback`) are top-level routes, not nested under `/settings` — admin surfaces have a different audience and a different RBAC story than user settings, and namespacing them under `/admin/...` keeps the boundary visible in URLs and logs. A gated "Admin Settings" entry appears in the existing app-header gear popover when `currentUser?.isSuperuser`.
 
-`crypto.randomUUID()` populates a `state` query param stashed in `sessionStorage.fyersOAuthState` before the redirect to Fyers; the callback consumes it unconditionally on entry (success *or* failure) and aborts on mismatch — CSRF defence on the redirect leg.
+`crypto.randomUUID()` populates a `state` query param stashed in `localStorage.fyersOAuthState` before opening Fyers in a `window.open` popup; the callback detects popup context via `window.opener`, posts a `{type: 'fyers-callback-success' | 'fyers-callback-error'}` message back to the opener (filtered on `event.origin`), and closes itself — the opener refreshes status inline. Full-page navigation is the popup-blocked fallback. `localStorage` (not `sessionStorage`) is intentional: cross-origin OAuth redirects can drop sessionStorage under browser tracking-protection policies, and the value is still single-use (removed on first read). The callback consumes the state unconditionally on entry (success *or* failure) and aborts on mismatch — CSRF defence on the redirect leg.
 
 ---
 
