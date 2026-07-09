@@ -67,6 +67,8 @@ Each path calls `EodhdMergerClient.fetchMergers(...)` → `https://eodhd.com/api
 
 ## Decision 5: Spin-off Is Manual-Entry Only
 
+> **Superseded by [ADR-043](043-spinoff-bhavkosh-auto-backfill-restored.md) (2026-05-17).** `CorporateActionSpinoffBackfillJob` was reintroduced after this ADR shipped, with BhavKosh JIT + weekly sweep matching the original ADR-024 §Decision 3 design. `CorporateActionSpinoffService` is retained for the admin manual-entry path; the two beans coexist. The auto-backfill was non-functional in production (lazy-init storm on Sunday cron) until the 2026-05-17 flat-projection migration. Treat the paragraphs below as historical record.
+
 `CorporateActionSpinoffBackfillJob` was deleted; the bean was renamed to `CorporateActionSpinoffService` and moved to `jobs/service/`. `EodhdSpinoffClient` was deleted. The class now exposes only:
 
 - `recordManualSpinoff(parentMasterId, childMasterId, exDate, sharesPerParent, basisAllocationPct)` — idempotent on `(parent, child, ex_date)`, upgrades a pre-existing partial row in place when the admin supplies a previously-null `basisAllocationPct`.
