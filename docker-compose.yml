@@ -180,6 +180,8 @@ services:
     ports:
       - "127.0.0.1:9999:8080" # Loopback only; view via SSH tunnel: ssh -L 9999:localhost:9999 user@vps
     mem_limit: 128m
+    networks:
+      - app-network
 
 networks:
   app-network:
