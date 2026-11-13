@@ -25,14 +25,15 @@ pull-infra:
 pull-all: pull-infra pull-frontend pull-backend pull-sweeper
     @echo "✅ All repositories updated."
 
-# 4. Master Deploy: Deploy everything, or pass a target to deploy a specific service
+# 4. Master Deploy: Pull prebuilt GHCR images and recreate changed containers
 # Usage: `sys deploy` OR `sys deploy backend`
 deploy target="":
-    @echo "🚀 Deploying {{target}}..."
-    docker compose up {{target}} --build -d
+    @echo "🚀 Pulling & deploying {{target}}..."
+    docker compose pull {{target}}
+    docker compose up {{target}} -d
 
-# 5. Start or update state without rebuilding images
+# 5. Start or update state without pulling new images
 # Usage: `sys start` OR `sys start dozzle`
 start target="":
-    @echo "▶️ Starting {{target}} (No Build)..."
+    @echo "▶️ Starting {{target}} (No Pull)..."
     docker compose up {{target}} -d

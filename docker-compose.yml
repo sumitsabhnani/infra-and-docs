@@ -40,10 +40,7 @@ services:
       - app-network
 
   backend:
-    build:
-      context: ../portfolio-optimizer-backend
-      dockerfile: Dockerfile
-    image: portfolio-optimizer-backend:latest
+    image: ghcr.io/sumitsabhnani/portfolio-optimizer-backend:${BACKEND_IMAGE_TAG:-latest}
     container_name: portfolio-optimizer-backend
     restart: unless-stopped
     environment:
@@ -114,10 +111,7 @@ services:
       - app-network
 
   price-sweeper:
-    build:
-      context: ../price-sweeper
-      dockerfile: Dockerfile
-    image: portfolio-price-sweeper:latest
+    image: ghcr.io/sumitsabhnani/price-sweeper:${SWEEPER_IMAGE_TAG:-latest}
     container_name: portfolio-price-sweeper
     restart: unless-stopped
     environment:
@@ -140,10 +134,7 @@ services:
       - app-network
 
   frontend:
-    build:
-      context: ../portfolio-optimizer-frontend
-      dockerfile: Dockerfile
-    image: portfolio-optimizer-frontend:latest
+    image: ghcr.io/sumitsabhnani/portfolio-optimizer-frontend:${FRONTEND_IMAGE_TAG:-latest}
     container_name: portfolio-optimizer-frontend
     restart: unless-stopped
     # No exposed host ports; cloudflared proxies traffic directly within app-network
