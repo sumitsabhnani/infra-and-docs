@@ -13,16 +13,12 @@ pull-backend:
     @echo "⬇️ Pulling Backend..."
     git -C ~/dhantera-app/portfolio-optimizer-backend pull
 
-pull-sweeper:
-    @echo "⬇️ Pulling Price Sweeper..."
-    git -C ~/dhantera-app/price-sweeper pull
-
 pull-infra:
     @echo "⬇️ Pulling Infra..."
     git -C ~/dhantera-app/infra-and-docs pull
 
 # 3. Pull everything in sequence
-pull-all: pull-infra pull-frontend pull-backend pull-sweeper
+pull-all: pull-infra pull-frontend pull-backend
     @echo "✅ All repositories updated."
 
 # 4. Master Deploy: Pull prebuilt GHCR images and recreate changed containers
@@ -30,10 +26,10 @@ pull-all: pull-infra pull-frontend pull-backend pull-sweeper
 deploy target="":
     @echo "🚀 Pulling & deploying {{target}}..."
     docker compose pull {{target}}
-    docker compose up {{target}} -d
+    @if [ -z "{{target}}" ]; then docker compose up -d --remove-orphans; else docker compose up -d {{target}}; fi
 
 # 5. Start or update state without pulling new images
 # Usage: `sys start` OR `sys start dozzle`
 start target="":
     @echo "▶️ Starting {{target}} (No Pull)..."
-    docker compose up {{target}} -d
+    @if [ -z "{{target}}" ]; then docker compose up -d --remove-orphans; else docker compose up -d {{target}}; fi

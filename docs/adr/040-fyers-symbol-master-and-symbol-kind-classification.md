@@ -1,6 +1,6 @@
 # ADR-040: Fyers Public Symbol Master + `symbol_kind` Classification + Non-Destructive Rename Detection
 
-**Status:** Accepted — rename detection gated by `app.jobs.rename-detection.enabled=false` until canonical-master ISIN coverage reaches >80% (currently 0% on the active NSE/BSE universe; `ExchangeSymbolLoadJob` is the unblocker).
+**Status:** Partially Superseded by [ADR-049](049-retire-price-sweeper-and-fyers-yahoo-intraday-polling.md) — Fyers public symbol master resolution (`Decision 1`, `Decision 4`) and `SecurityListingRenameDetectionJob` (`Decision 3`) are retired alongside `price-sweeper`/Fyers; `market_data_symbol.symbol_kind`, `SymbolKindClassifier`, `IndianTickerNormalizer` (`Decision 2`), and the `security_listing_rename_history` audit table (now populated by `ExchangeSymbolLoadJob`) remain active.
 **Date:** 2026-05-14
 **Extends:** ADR-006 (price-sweeper sidecar), ADR-019 (read-time canonicalization), ADR-032 (`-RE` ticker is load-bearing for OVERSOLD triage), ADR-034 (ISIN auto-aliasing + link-previous).
 

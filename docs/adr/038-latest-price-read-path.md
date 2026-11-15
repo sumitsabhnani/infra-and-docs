@@ -1,6 +1,6 @@
 # ADR-038: Latest-Price Read Path — Unified Cache, Symmetric JIT, Market-Hours-Aware Refresh
 
-**Status:** Accepted
+**Status:** Accepted (Amended by [ADR-049](049-retire-price-sweeper-and-fyers-yahoo-intraday-polling.md): `LatestPriceRefreshJob` and `PriceService` cold-miss async JIT now route all Indian and global intraday quotes through in-process `YahooFinanceClient` + `MarketHours.isExchangeOpen`, `SweeperPriceCacheReader` is retired, `EodhdJitFetchHandler` is hardened pending Phase 4 EODHD retirement, and `LatestMarketPriceRepository.upsertLatestPrice` enforces cross-provider monotonic `as_of` ordering)
 **Date:** 2026-05-12
 **Related:** ADR-006 (price-sweeper microservice), ADR-022 (backfill progress derived, not persisted), ADR-028 (EODHD JIT backfill is serial, throttled, bounded-retry)
 
