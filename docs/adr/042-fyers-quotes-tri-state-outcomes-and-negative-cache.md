@@ -1,6 +1,6 @@
 # ADR-042: Fyers `/quotes` Runtime Failure Classification — Tri-State Outcomes, Negative Cache
 
-**Status:** Accepted
+**Status:** Superseded by [ADR-049](049-retire-price-sweeper-and-fyers-yahoo-intraday-polling.md) (`price-sweeper` and Fyers `/quotes` retired; tri-state `FOUND` / `REJECTED` / `FAILED` classification and 24h `market_data:yahoo:invalid:*` negative caching ported in-process to Java `YahooFinanceClient` + `YahooSymbolNegativeCache`)
 **Date:** 2026-05-10
 **Extends:** ADR-006 (price-sweeper sidecar), ADR-036 (system-identity vendor tokens)
 **Composes with:** ADR-040 (Fyers symbol master + `symbol_kind` classification) — ADR-040 is the *upstream* mechanism that filters known-bad categories (e.g. `RIGHTS_ENTITLEMENT`) out of the active universe at SQL and resolves correct Fyers symbols at the boundary. This ADR specifies the *runtime* classification that remains necessary for the residual per-call rejections (delistings, halted symbols, transient mid-day data gaps) that the SQL filter cannot pre-empt.

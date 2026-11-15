@@ -1,6 +1,6 @@
 # ADR-036: System-Wide Vendor API Tokens — Encrypted Singleton, Superuser-Captured
 
-**Status:** Accepted
+**Status:** Accepted (Amended by [ADR-049](049-retire-price-sweeper-and-fyers-yahoo-intraday-polling.md): the `fyers_token` table, `FyersAdminController`, and `/admin/settings` Fyers card were retired in Phase 3; the encrypted singleton-row + server-side superuser exchange pattern remains the canonical blueprint for any future system-identity vendor)
 **Date:** 2026-05-07
 **Related:** ADR-005 (security & identity model), ADR-002 (per-user SnapTrade credential pattern)
 

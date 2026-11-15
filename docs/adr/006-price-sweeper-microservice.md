@@ -1,6 +1,6 @@
 # ADR-006: Price Sweeper — Python Sidecar for Real-Time Prices
 
-**Status:** Accepted (with amendments — see banner below)
+**Status:** Superseded by [ADR-049](049-retire-price-sweeper-and-fyers-yahoo-intraday-polling.md) (`price-sweeper` sidecar and Fyers V3 retired; delayed intraday quote polling consolidated in-process inside `portfolio-optimizer-backend` via `YahooFinanceClient` + `LatestPriceRefreshJob`)
 **Date:** 2026-04-12
 **Context:** The Java backend needs near-real-time stock prices during Indian market hours (09:15–15:30 IST). Yahoo Finance provides free delayed quotes (~15 min), but the `yahooquery` Python library is significantly more mature and reliable than available Java alternatives. Rather than fighting the ecosystem, we built a dedicated Python microservice.
 

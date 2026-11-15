@@ -91,10 +91,6 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
       SUPABASE_STORAGE_BUCKET: ${SUPABASE_STORAGE_BUCKET}
-
-      FYERS_CLIENT_ID: ${FYERS_CLIENT_ID}
-      FYERS_SECRET_KEY: ${FYERS_SECRET_KEY}
-      PRICE_SWEEPER_BASE_URL: http://price-sweeper:8000
     depends_on:
       postgres:
         condition: service_healthy
@@ -107,29 +103,6 @@ services:
       retries: 3
       start_period: 60s
     mem_limit: 2g
-    networks:
-      - app-network
-
-  price-sweeper:
-    image: ghcr.io/sumitsabhnani/price-sweeper:${SWEEPER_IMAGE_TAG:-latest}
-    container_name: portfolio-price-sweeper
-    restart: unless-stopped
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
-      FYERS_CLIENT_ID: ${FYERS_CLIENT_ID}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    mem_limit: 512m
     networks:
       - app-network
 
