@@ -7,15 +7,15 @@ default:
 # 2. Pull individual repositories
 pull-frontend:
     @echo "⬇️ Pulling Frontend..."
-    git -C ~/dhantera-app/portfolio-optimizer-frontend pull
+    git -C /opt/portfolio_optimizer/portfolio-optimizer-frontend pull
 
 pull-backend:
     @echo "⬇️ Pulling Backend..."
-    git -C ~/dhantera-app/portfolio-optimizer-backend pull
+    git -C /opt/portfolio_optimizer/portfolio-optimizer-backend pull
 
 pull-infra:
     @echo "⬇️ Pulling Infra..."
-    git -C ~/dhantera-app/infra-and-docs pull
+    git -C /opt/portfolio_optimizer/infra-and-docs pull
 
 # 3. Pull everything in sequence
 pull-all: pull-infra pull-frontend pull-backend
