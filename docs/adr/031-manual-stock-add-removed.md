@@ -1,8 +1,8 @@
 # ADR-031: Manual Stock-Add Removed — Holdings Mutate Only Through Replay
 
-**Status:** Accepted
+**Status:** Accepted (Amended 2026-11-23 — three-way portfolio projection authority)
 **Date:** 2026-05-04
-**Extends:** ADR-020 (Holdings Are Strictly Derived)
+**Extends:** ADR-020 (Holdings Are Strictly Derived), ADR-050 (Linked-to-Manual Portfolio Conversion)
 
 ---
 
@@ -38,7 +38,11 @@ Retained:
 - `ApiService.searchSymbols` — used by `<app-ticker-mapping-modal>` for unmapped-CSV-ticker resolution.
 - `ApiService.createManualPortfolio` — used by `<app-bulk-changes-tab>`.
 
-**Invariant:** the only paths that insert or remove `holdings` rows are (a) the replay engine writing `ReplayResult.terminalByMaster()` outputs into the projection via `updateHoldingsForPortfolio`, and (b) `deleteByPortfolioId` cascades on portfolio delete. No HTTP endpoint creates or deletes a holding directly.
+**Invariant (Amended 2026-11-23 — Three-Way Portfolio Projection Authority):** No HTTP endpoint creates or deletes a holding directly, and `HoldingService.updateHoldingsForPortfolio` / `updateHoldingForMaster` govern `holdings` rows according to portfolio provenance:
+
+1. **SnapTrade-linked (`SnaptradeConnectionRepository.existsByPortfolioId(portfolioId)`):** `SnapTradeHoldingsReconciler` is the sole writer of `holdings`. Replay rebuilds (`updateHoldingsForPortfolio` and `updateHoldingForMaster`) publish `UserHoldingsChangedEvent` and return without overwriting, re-pointing, or deleting broker-sourced `holdings` rows. `POST /api/holdings/rebuild` and `POST /api/mutual-funds/sips` return `409 Conflict` on SnapTrade-linked portfolios.
+2. **Converted to Manual (`!isSnapTradeLinked && portfolio.convertedFromBrokerSyncAt != null`, ADR-050):** Conversion stamps `holdings.broker_snapshot_quantity` on existing rows. Rebuilds project broker-anchored masters via `projectedQty = snapshotQty * postCutoffSplitFactor + (replayAll - replayPreCutoff)` (UTC `LocalDate` cutoff matching ADR-050 CSV dedup), preserving pre-cutoff unledgered and oversold broker shares while allowing backdated fixes (`<= cutoff`) to close the gap without inflating `projectedQty` and post-cutoff trades (`> cutoff`) to adjust quantity normally.
+3. **Pure Manual / CSV (`!isSnapTradeLinked && portfolio.convertedFromBrokerSyncAt == null`):** `holdings` is a strict projection of `ReplayResult.terminalByMaster()`. Removal of unbacked `Holding` rows (empty ledger on `broker = 99` or masters absent from replay) is routed through `OrphanHoldingPrunePolicy` (`prune_orphan_manual_holdings` flag, default `false` dry-run audit logging before activation).
 
 ### 2. Needs-Review CTAs that pointed at manual-add are passive badges now
 
