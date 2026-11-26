@@ -37,7 +37,7 @@ Broker activity feeds and tradebook CSVs (most notably Zerodha Console and SnapT
 - Unique 1:1 split-equivalent same-currency pairs `(UNRECORDED_DISPOSAL [held=0], MISSING_BUY_HISTORY [replay=0, 0 txns])` carry `suggestedCounterpartyMasterId`, `suggestedSymbol`, and `renameConfidence`:
   - **`HIGH` (Primary CTA `Link to <ticker>`):** Corroborated by `security_listing_rename_history`, shared 6-char same-country ISIN issuer prefix, or `|exitDate - firstObservedDate| <= 14d` post-initial-sync.
   - **`LOW` (Secondary CTA `Possibly renamed from <ticker>?`):** Quantity-only match keeps `Add missing BUY / Gift` primary and warns against coincidental round-lot global merges.
-- On the holding-only authorization path (`0` transactions on `newMasterId`), `SecurityMasterAliasService.linkAlias` requires transactions on `previousMasterId` **and** re-runs `PositionGapReconciliationStrategy` on the caller's portfolio(s), returning `FORBIDDEN` unless `effectivePreviousId.equals(hint.suggestedCounterpartyMasterId())`.
+- On the holding-only authorization path (`0` transactions on `newMasterId`), `SecurityMasterAliasService.linkAlias` requires transactions on `previousMasterId` **and** re-runs `PositionGapReconciliationStrategy` on the caller's portfolio(s), returning `FORBIDDEN` unless `effectivePreviousId` matches `hint.suggestedCounterpartyMasterId()` or forms a same-portfolio compatible-currency `(MISSING_BUY_HISTORY/OVERSOLD, UNRECORDED_DISPOSAL/ORPHANED_BUY_NEEDS_RENAME)` pair (supporting renames with unequal pre-/post-rename share counts such as `SETFNIF50 → SBINIFTY50`).
 
 ### Decision 4: BhavKosh Post-Split History Refresh & Scalar `historical-close` Endpoint
 
